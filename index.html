@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regroup or Not? 🔍</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue: #3b82f6;
+    --blue-dark: #1d4ed8;
+    --yellow: #fbbf24;
+    --green: #22c55e;
+    --red: #ef4444;
+    --purple: #8b5cf6;
+    --bg: #fef9f0;
+    --card: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px 16px 48px;
+    background-image:
+      radial-gradient(circle at 15% 15%, #fde68a44 0%, transparent 45%),
+      radial-gradient(circle at 85% 85%, #bfdbfe44 0%, transparent 45%);
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 14px;
+    animation: bounceIn 0.6s ease;
+  }
+  .header h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2rem, 5vw, 3rem);
+    color: var(--text);
+    line-height: 1;
+  }
+  .header h1 .q { color: var(--text); }
+  .header p {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-top: 4px;
+    font-weight: 700;
+  }
+
+  .progress-wrap {
+    width: min(700px, 95vw);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .progress-bar {
+    flex: 1;
+    height: 13px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blue), var(--purple));
+    border-radius: 999px;
+    transition: width 0.5s ease;
+  }
+  .progress-label {
+    font-size: 0.82rem;
+    color: var(--muted);
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  /* Side-by-side stage */
+  .stage {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    width: min(820px, 98vw);
+    justify-content: center;
+  }
+
+  /* MAIN CARD */
+  .card {
+    background: var(--card);
+    border-radius: 26px;
+    padding: 26px 26px 22px;
+    width: 320px;
+    flex-shrink: 0;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+    text-align: center;
+    animation: slideUp 0.4s ease;
+    position: relative;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 6px;
+    border-radius: 26px 26px 0 0;
+    background: linear-gradient(90deg, var(--blue), var(--purple), var(--yellow));
+  }
+
+  .score-badge {
+    position: absolute;
+    top: 14px; right: 14px;
+    background: linear-gradient(135deg, var(--purple), #7c3aed);
+    color: white;
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.88rem;
+    padding: 4px 11px;
+    border-radius: 999px;
+  }
+
+  /* EQUATION — grid with minus left-aligned */
+  .equation-box {
+    background: #f8fafc;
+    border: 3px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 18px 24px 14px;
+    display: inline-block;
+    margin: 10px auto 18px;
+  }
+
+  .eq-grid {
+    display: grid;
+    grid-template-columns: 40px auto;
+    align-items: center;
+    row-gap: 0;
+  }
+
+  .eq-op {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2.4rem;
+    color: var(--muted);
+    text-align: left;
+    line-height: 1;
+  }
+  .eq-op.hidden { visibility: hidden; }
+
+  .eq-num {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2.6rem, 8vw, 3.6rem);
+    color: var(--text);
+    text-align: right;
+    letter-spacing: 3px;
+    line-height: 1.1;
+  }
+
+  /* Divider spans full width, sits between bottom number and answer */
+  .eq-divider-cell {
+    grid-column: 1 / -1;
+    padding: 6px 0 4px;
+  }
+  .eq-divider-cell hr {
+    border: none;
+    border-top: 4px solid #334155;
+    border-radius: 2px;
+  }
+
+  .eq-answer {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2.6rem, 8vw, 3.6rem);
+    color: #cbd5e1;
+    text-align: right;
+    letter-spacing: 3px;
+    line-height: 1.1;
+    min-height: 1.2em;
+    grid-column: 2;
+    transition: color 0.2s;
+  }
+  .eq-answer.revealed {
+    color: var(--text);
+    animation: popIn 0.35s ease;
+  }
+
+  .hint-text {
+    font-size: 0.88rem;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+  .hl-blue { color: var(--blue-dark); font-size: 1rem; font-weight: 800; }
+  .hl-red  { color: var(--red);       font-size: 1rem; font-weight: 800; }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+  .btn-choice {
+    flex: 1;
+    padding: 14px 0;
+    border: none;
+    border-radius: 15px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.35rem;
+    cursor: pointer;
+    transition: transform 0.12s, box-shadow 0.12s;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.14);
+    position: relative;
+    top: 0;
+    line-height: 1.2;
+  }
+  .btn-choice:active { top: 4px; box-shadow: 0 1px 0 rgba(0,0,0,0.14); }
+  .btn-yes { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+  .btn-yes:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 8px 0 rgba(37,99,235,0.38); }
+  .btn-no  { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #1e293b; }
+  .btn-no:hover:not(:disabled)  { transform: translateY(-3px); box-shadow: 0 8px 0 rgba(245,158,11,0.38); }
+  .btn-choice:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+  .btn-sub { font-size: 0.68rem; font-family: 'Nunito', sans-serif; font-weight: 800; display: block; }
+
+  .btn-choice.correct { outline: 4px solid #22c55e; outline-offset: 3px; animation: pulseGreen 0.45s ease; }
+  .btn-choice.wrong   { outline: 4px solid #ef4444; outline-offset: 3px; animation: shake 0.4s ease; }
+
+  .btn-next {
+    margin-top: 14px;
+    padding: 11px 30px;
+    background: linear-gradient(135deg, var(--purple), #7c3aed);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.15rem;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(124,58,237,0.38);
+    transition: transform 0.12s;
+    display: none;
+  }
+  .btn-next:hover { transform: translateY(-2px); }
+  .btn-next.show  { display: inline-block; animation: fadeUp 0.3s ease; }
+
+  /* REASON PANEL */
+  .reason-panel {
+    background: var(--card);
+    border-radius: 22px;
+    padding: 22px 20px;
+    width: 250px;
+    flex-shrink: 0;
+    box-shadow: 0 8px 36px rgba(0,0,0,0.09);
+    display: none;
+    align-self: flex-start;
+  }
+  .reason-panel.show { display: block; animation: slideLeft 0.35s ease; }
+  .reason-panel.correct-panel { border-top: 6px solid var(--green); }
+  .reason-panel.wrong-panel   { border-top: 6px solid var(--red); }
+
+  .rp-emoji { font-size: 2rem; display: block; margin-bottom: 6px; }
+  .rp-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.25rem;
+    margin-bottom: 6px;
+  }
+  .rp-title.ok  { color: #15803d; }
+  .rp-title.err { color: #b91c1c; }
+  .rp-verdict {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+  .rp-reason {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #475569;
+    line-height: 1.65;
+  }
+  .rp-reason strong { color: var(--text); }
+  .tag-b { background: #dbeafe; color: #1d4ed8; border-radius: 4px; padding: 0 4px; font-weight: 800; }
+  .tag-r { background: #fee2e2; color: #b91c1c; border-radius: 4px; padding: 0 4px; font-weight: 800; }
+  .rp-rule {
+    margin-top: 11px;
+    padding: 9px 11px;
+    background: #f1f5f9;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* SCORE SCREEN */
+  .score-screen { display: none; text-align: center; padding: 6px 0; }
+  .score-screen.show { display: block; animation: bounceIn 0.5s ease; }
+  .score-screen .big-emoji { font-size: 4rem; }
+  .score-screen h2 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.9rem;
+    color: var(--text);
+    margin: 8px 0 2px;
+  }
+  .score-num {
+    font-family: 'Fredoka One', cursive;
+    font-size: 3.2rem;
+    color: var(--blue);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .score-screen p { color: var(--muted); font-weight: 700; margin-bottom: 18px; font-size: 0.95rem; }
+  .btn-restart {
+    padding: 12px 30px;
+    background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.15rem;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(29,78,216,0.38);
+    transition: transform 0.12s;
+  }
+  .btn-restart:hover { transform: translateY(-2px); }
+
+  @keyframes bounceIn {
+    0%   { transform: scale(0.8); opacity: 0; }
+    60%  { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(28px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  @keyframes slideLeft {
+    from { transform: translateX(24px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  @keyframes fadeUp {
+    from { transform: translateY(10px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  @keyframes popIn {
+    0%   { transform: scale(0.5); opacity: 0; }
+    75%  { transform: scale(1.12); }
+    100% { transform: scale(1);   opacity: 1; }
+  }
+  @keyframes pulseGreen {
+    0%,100% { box-shadow: 0 5px 0 rgba(0,0,0,0.14); }
+    50%     { box-shadow: 0 0 16px #22c55e, 0 5px 0 rgba(0,0,0,0.14); }
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25%     { transform: translateX(-7px); }
+    75%     { transform: translateX(7px); }
+  }
+
+  @media (max-width: 620px) {
+    .stage { flex-direction: column; align-items: center; }
+    .reason-panel { width: min(320px, 94vw); align-self: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔍 Regroup or Not<span class="q">?</span></h1>
+  <p>Does this subtraction need regrouping?</p>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="progress-label" id="progressLabel">1 / 20</div>
+</div>
+
+<div class="stage" id="stage">
+
+  <!-- CARD -->
+  <div class="card" id="mainCard">
+    <div class="score-badge" id="scoreBadge">⭐ 0</div>
+
+    <div id="questionView">
+
+      <div class="equation-box">
+        <div class="eq-grid">
+          <!-- top number — no operator -->
+          <span class="eq-op hidden">−</span>
+          <span class="eq-num" id="eqTop">52</span>
+
+          <!-- bottom number — minus sign left -->
+          <span class="eq-op" id="eqMinus">−</span>
+          <span class="eq-num" id="eqBot">17</span>
+
+          <!-- divider line -->
+          <div class="eq-divider-cell"><hr></div>
+
+          <!-- answer — operator column left empty -->
+          <span></span>
+          <span class="eq-answer" id="eqAnswer">?</span>
+        </div>
+      </div>
+
+      <div class="hint-text">
+        Ones on top: <span class="hl-blue" id="onesTop">2</span>
+        &nbsp;·&nbsp;
+        Ones to subtract: <span class="hl-red" id="onesBot">7</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-choice btn-yes" id="btnYes" onclick="answer(true)">
+          ✔ YES<span class="btn-sub">Regroup!</span>
+        </button>
+        <button class="btn-choice btn-no" id="btnNo" onclick="answer(false)">
+          ✘ NO<span class="btn-sub">No regroup</span>
+        </button>
+      </div>
+
+      <button class="btn-next" id="btnNext" onclick="nextQuestion()">Next ➜</button>
+    </div>
+
+    <!-- Score screen lives inside card -->
+    <div class="score-screen" id="scoreScreen">
+      <div class="big-emoji" id="finalEmoji">🌟</div>
+      <h2>All Done!</h2>
+      <div class="score-num" id="finalScore">0/20</div>
+      <p id="finalMsg">Great work!</p>
+      <button class="btn-restart" onclick="restart()">🔄 Play Again</button>
+    </div>
+  </div>
+
+  <!-- REASON PANEL beside card -->
+  <div class="reason-panel" id="reasonPanel">
+    <span class="rp-emoji" id="rpEmoji">🎉</span>
+    <div class="rp-title" id="rpTitle">Correct!</div>
+    <div class="rp-verdict" id="rpVerdict"></div>
+    <div class="rp-reason" id="rpReason"></div>
+    <div class="rp-rule"   id="rpRule"></div>
+  </div>
+
+</div>
+
+<script>
+const Qs = [
+  { top:52, bot:17 },
+  { top:43, bot:28 },
+  { top:75, bot:31 },
+  { top:64, bot:19 },
+  { top:88, bot:42 },
+  { top:31, bot:15 },
+  { top:90, bot:37 },
+  { top:56, bot:23 },
+  { top:72, bot:48 },
+  { top:65, bot:32 },
+  { top:47, bot:29 },
+  { top:83, bot:51 },
+  { top:24, bot:16 },
+  { top:91, bot:45 },
+  { top:78, bot:34 },
+  { top:36, bot:18 },
+  { top:60, bot:25 },
+  { top:55, bot:22 },
+  { top:84, bot:67 },
+  { top:97, bot:53 },
+];
+Qs.forEach(q => {
+  q.answer = q.top - q.bot;
+  q.needsRegroup = (q.top % 10) < (q.bot % 10);
+});
+
+let cur = 0, score = 0, done = false;
+
+function load() {
+  done = false;
+  const q = Qs[cur];
+  const oT = q.top % 10, oB = q.bot % 10;
+
+  set('eqTop', q.top);
+  set('eqBot', q.bot);
+  set('eqAnswer', '?');
+  get('eqAnswer').classList.remove('revealed');
+  set('onesTop', oT);
+  set('onesBot', oB);
+
+  ['btnYes','btnNo'].forEach(id => {
+    const b = get(id);
+    b.disabled = false;
+    b.className = id==='btnYes' ? 'btn-choice btn-yes' : 'btn-choice btn-no';
+  });
+
+  get('btnNext').className = 'btn-next';
+  get('reasonPanel').className = 'reason-panel';
+
+  get('progressLabel').textContent = `${cur+1} / ${Qs.length}`;
+  get('progressFill').style.width  = `${(cur/Qs.length)*100}%`;
+}
+
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+
+function playCorrect() {
+  [[523.25,0,0.12],[659.25,0.13,0.12],[783.99,0.26,0.18]].forEach(([freq,when,dur])=>{
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.connect(g);g.connect(AC.destination);
+    o.type='sine';o.frequency.value=freq;
+    const t=AC.currentTime+when;
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(0.28,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+    o.start(t);o.stop(t+dur+0.05);
+  });
+}
+
+function playWrong() {
+  [[220,0,0.08],[180,0.09,0.08],[140,0.18,0.14]].forEach(([freq,when,dur])=>{
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.connect(g);g.connect(AC.destination);
+    o.type='sawtooth';o.frequency.value=freq;
+    const t=AC.currentTime+when;
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(0.18,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+    o.start(t);o.stop(t+dur+0.05);
+  });
+}
+
+function answer(yes) {
+  if (done) return;
+  done = true;
+
+  const q = Qs[cur];
+  const correct = (yes === q.needsRegroup);
+  const oT = q.top % 10, oB = q.bot % 10;
+
+  if (AC.state === 'suspended') AC.resume();
+  correct ? playCorrect() : playWrong();
+
+  ['btnYes','btnNo'].forEach(id => get(id).disabled = true);
+  const btn = get(yes ? 'btnYes' : 'btnNo');
+  btn.className += correct ? ' correct' : ' wrong';
+
+  setTimeout(() => {
+    const el = get('eqAnswer');
+    el.textContent = q.answer;
+    el.classList.add('revealed');
+  }, 180);
+
+  if (correct) {
+    score++;
+    set('scoreBadge', `⭐ ${score}`);
+  }
+
+  // Reason panel content
+  const goodEmojis = ['🎉','⭐','🌟','🎊','👏','✨'];
+  const badEmojis  = ['🤔','💡','🧐','📚'];
+  set('rpEmoji', (correct ? goodEmojis : badEmojis)[Math.floor(Math.random()*(correct?6:4))]);
+
+  const titleEl = get('rpTitle');
+  titleEl.textContent = correct ? 'Correct!' : 'Not quite!';
+  titleEl.className   = 'rp-title ' + (correct ? 'ok' : 'err');
+
+  if (q.needsRegroup) {
+    set('rpVerdict', `YES — Regrouping needed! ✅`);
+    get('rpReason').innerHTML =
+      `The ones digit on top is <span class="tag-b">${oT}</span> and we need to subtract <span class="tag-r">${oB}</span>.<br><br>`+
+      `Since <strong>${oT} &lt; ${oB}</strong>, the top is too small!`;
+    get('rpRule').innerHTML =
+      `📦 Go next door &amp; borrow 10!<br>${oT} + 10 = ${oT+10}, then ${oT+10} − ${oB} = ${oT+10-oB}`;
+  } else {
+    set('rpVerdict', `NO — No regrouping needed! 🙌`);
+    get('rpReason').innerHTML =
+      `The ones digit on top is <span class="tag-b">${oT}</span> and we need to subtract <span class="tag-r">${oB}</span>.<br><br>`+
+      `Since <strong>${oT} ≥ ${oB}</strong>, there's enough on top!`;
+    get('rpRule').innerHTML =
+      `✅ More on top — no need to stop!<br>${oT} − ${oB} = ${oT - oB}. Easy!`;
+  }
+
+  get('reasonPanel').className = 'reason-panel show ' + (correct ? 'correct-panel' : 'wrong-panel');
+  get('btnNext').className = 'btn-next show';
+}
+
+function nextQuestion() {
+  cur++;
+  if (cur >= Qs.length) { showScore(); return; }
+  const c = get('mainCard');
+  c.style.animation = 'none';
+  void c.offsetWidth;
+  c.style.animation = 'slideUp 0.4s ease';
+  load();
+}
+
+function showScore() {
+  get('questionView').style.display = 'none';
+  get('reasonPanel').className = 'reason-panel';
+  get('scoreScreen').className = 'score-screen show';
+
+  const pct = score / Qs.length;
+  const [emoji, msg] = pct===1 ? ['🏆','Perfect! You\'re a regrouping superstar! 🌟']
+    : pct>=.85 ? ['🌟','Amazing work! Almost perfect!']
+    : pct>=.65 ? ['👍','Good job! Keep practicing!']
+    : ['💪','Nice try! Give it another go!'];
+
+  set('finalEmoji', emoji);
+  set('finalScore', `${score}/${Qs.length}`);
+  set('finalMsg',   msg);
+  get('progressFill').style.width = '100%';
+  set('progressLabel', 'All done!');
+}
+
+function restart() {
+  cur = 0; score = 0;
+  set('scoreBadge', '⭐ 0');
+  get('scoreScreen').className = 'score-screen';
+  get('questionView').style.display = 'block';
+  load();
+}
+
+function get(id) { return document.getElementById(id); }
+function set(id, v) { get(id).textContent = v; }
+
+load();
+</script>
+</body>
+</html>
