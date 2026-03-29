@@ -123,7 +123,7 @@
     border-radius: 999px;
   }
 
-  /* EQUATION — grid with minus left-aligned */
+  /* EQUATION — per-digit cells for perfect alignment */
   .equation-box {
     background: #f8fafc;
     border: 3px solid #e2e8f0;
@@ -131,58 +131,64 @@
     padding: 18px 24px 14px;
     display: inline-block;
     margin: 10px auto 18px;
+    position: relative;
   }
-
-  .eq-grid {
-    display: grid;
-    grid-template-columns: 40px auto;
+  /* Each row: operator col + tens cell + ones cell */
+  .eq-row {
+    display: flex;
     align-items: center;
-    row-gap: 0;
+    justify-content: flex-end;
+    line-height: 1.1;
   }
-
   .eq-op {
     font-family: 'Fredoka One', cursive;
-    font-size: 2.4rem;
+    font-size: 2.2rem;
     color: var(--muted);
+    width: 38px;
     text-align: left;
-    line-height: 1;
+    flex-shrink: 0;
   }
   .eq-op.hidden { visibility: hidden; }
-
-  .eq-num {
+  /* Each digit gets its own fixed-width box */
+  .d-cell {
     font-family: 'Fredoka One', cursive;
     font-size: clamp(2.6rem, 8vw, 3.6rem);
     color: var(--text);
-    text-align: right;
-    letter-spacing: 3px;
-    line-height: 1.1;
+    width: 52px;
+    text-align: center;
+    display: inline-block;
+    flex-shrink: 0;
   }
-
-  /* Divider spans full width, sits between bottom number and answer */
-  .eq-divider-cell {
-    grid-column: 1 / -1;
-    padding: 6px 0 4px;
-  }
-  .eq-divider-cell hr {
+  .eq-divider {
     border: none;
     border-top: 4px solid #334155;
     border-radius: 2px;
+    margin: 6px 0 4px;
+    width: 100%;
+    display: block;
   }
-
   .eq-answer {
     font-family: 'Fredoka One', cursive;
     font-size: clamp(2.6rem, 8vw, 3.6rem);
     color: #cbd5e1;
-    text-align: right;
-    letter-spacing: 3px;
     line-height: 1.1;
     min-height: 1.2em;
-    grid-column: 2;
+    display: flex;
+    justify-content: flex-end;
     transition: color 0.2s;
   }
   .eq-answer.revealed {
     color: var(--text);
     animation: popIn 0.35s ease;
+  }
+  .ans-cell {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2.6rem, 8vw, 3.6rem);
+    width: 52px;
+    text-align: center;
+    display: inline-block;
+    flex-shrink: 0;
+    color: inherit;
   }
 
   .hint-text {
@@ -383,21 +389,24 @@
     <div id="questionView">
 
       <div class="equation-box">
-        <div class="eq-grid">
-          <!-- top number — no operator -->
+        <!-- top number row — no operator -->
+        <div class="eq-row">
           <span class="eq-op hidden">−</span>
-          <span class="eq-num" id="eqTop">52</span>
-
-          <!-- bottom number — minus sign left -->
-          <span class="eq-op" id="eqMinus">−</span>
-          <span class="eq-num" id="eqBot">17</span>
-
-          <!-- divider line -->
-          <div class="eq-divider-cell"><hr></div>
-
-          <!-- answer — operator column left empty -->
-          <span></span>
-          <span class="eq-answer" id="eqAnswer">?</span>
+          <span class="d-cell" id="eqTopTens">5</span>
+          <span class="d-cell" id="eqTopOnes">2</span>
+        </div>
+        <!-- bottom number row — minus sign left -->
+        <div class="eq-row">
+          <span class="eq-op">−</span>
+          <span class="d-cell" id="eqBotTens">1</span>
+          <span class="d-cell" id="eqBotOnes">7</span>
+        </div>
+        <!-- divider line -->
+        <hr class="eq-divider">
+        <!-- answer row -->
+        <div class="eq-answer" id="eqAnswer">
+          <span class="ans-cell" id="eqAnsTens">?</span>
+          <span class="ans-cell" id="eqAnsOnes">&nbsp;</span>
         </div>
       </div>
 
@@ -441,7 +450,7 @@
 </div>
 
 <script>
-const Qs = [
+const ALL_Qs = [
   { top:52, bot:17 },
   { top:43, bot:28 },
   { top:75, bot:31 },
@@ -463,11 +472,21 @@ const Qs = [
   { top:84, bot:67 },
   { top:97, bot:53 },
 ];
-Qs.forEach(q => {
+ALL_Qs.forEach(q => {
   q.answer = q.top - q.bot;
   q.needsRegroup = (q.top % 10) < (q.bot % 10);
 });
 
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+let Qs = shuffle(ALL_Qs);
 let cur = 0, score = 0, done = false;
 
 function load() {
@@ -475,9 +494,12 @@ function load() {
   const q = Qs[cur];
   const oT = q.top % 10, oB = q.bot % 10;
 
-  set('eqTop', q.top);
-  set('eqBot', q.bot);
-  set('eqAnswer', '?');
+  set('eqTopTens', Math.floor(q.top/10));
+  set('eqTopOnes', q.top % 10);
+  set('eqBotTens', Math.floor(q.bot/10));
+  set('eqBotOnes', q.bot % 10);
+  get('eqAnsTens').textContent = '?';
+  get('eqAnsOnes').textContent = ' ';
   get('eqAnswer').classList.remove('revealed');
   set('onesTop', oT);
   set('onesBot', oB);
@@ -539,9 +561,9 @@ function answer(yes) {
   btn.className += correct ? ' correct' : ' wrong';
 
   setTimeout(() => {
-    const el = get('eqAnswer');
-    el.textContent = q.answer;
-    el.classList.add('revealed');
+    get('eqAnsTens').textContent = Math.floor(q.answer/10);
+    get('eqAnsOnes').textContent = q.answer % 10;
+    get('eqAnswer').classList.add('revealed');
   }, 180);
 
   if (correct) {
@@ -607,6 +629,7 @@ function showScore() {
 }
 
 function restart() {
+  Qs = shuffle(ALL_Qs);
   cur = 0; score = 0;
   set('scoreBadge', '⭐ 0');
   get('scoreScreen').className = 'score-screen';
